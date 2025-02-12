@@ -2,14 +2,15 @@
 import argparse
 import json
 import logging
-import requests
 import os
 import sys
+import textwrap
+from typing import Any, Dict, List
+
+import requests
 
 # import urllib3
 from typeguard import typechecked
-from typing import Any, Dict, List
-import textwrap
 
 _LOGGER = logging.getLogger(__name__)
 logging.basicConfig(
@@ -353,13 +354,14 @@ def compare_json(json1, json2):
         if isinstance(obj1, dict) and isinstance(obj2, dict):
             for key in obj1:
                 if key not in obj2 or obj1.get("key", None) != obj2.get("key", None):
-                    differences.append(
-                        {
-                            "path": f"{path}{'/' if path else ''}{key}",
-                            "value1": obj1.get("key", None),
-                            "value2": obj2.get("key", None),
-                        }
-                    )
+                    if obj1.get("key", None) is not None and obj2.get("key", None) is not None:
+                        differences.append(
+                            {
+                                "path": f"{path}{'/' if path else ''}{key}",
+                                "value1": obj1.get("key", None),
+                                "value2": obj2.get("key", None),
+                            }
+                        )
                 _compare(obj1[key], obj2.get(key, {}), f"{path}/{key}")
 
         # Compare Lists
@@ -376,7 +378,7 @@ def compare_json(json1, json2):
                     }
                 )
 
-            # # Compare items in Lists
+            # # Compare Items in Lists
             # for i in range(min(len(obj1), len(obj2))):
             #     if obj1[i] != obj2[i]:
             #         differences.append(
@@ -388,7 +390,7 @@ def compare_json(json1, json2):
             #         )
             #     _compare(obj1[i], obj2[i], f"{path}[{i}]")
 
-        # Compare primitive types
+        # Compare Primitive Types
         else:  # Primitive types (strings, numbers, booleans)
             if obj1 != obj2:
                 differences.append(
@@ -400,6 +402,7 @@ def compare_json(json1, json2):
                 )
 
     _compare(json1, json2, "")
+    
     return {
         "identical": len(differences) == 0,
         "differences": differences,
@@ -425,14 +428,13 @@ def main() -> None:
             """\
             Examples:
             --------------------------------
-            # Merge Computer Groups from DS with SWP
             $ ./policy-compare.py --policy1 ID --policy2 ID
             """
         ),
     )
 
-    parser.add_argument("--policy1", type=int, nargs=1, metavar="TYPE", help="policy one")
-    parser.add_argument("--policy2", type=int, nargs=1, metavar="TYPE", help="policy two")
+    parser.add_argument("--policy1", type=int, nargs=1, metavar="ID", help="policy one")
+    parser.add_argument("--policy2", type=int, nargs=1, metavar="ID", help="policy two")
 
     args = parser.parse_args()
 
@@ -441,22 +443,16 @@ def main() -> None:
 
     json1_name = json1.get("name", "Policy 1")
     json2_name = json2.get("name", "Policy 1")
-    
-    # with open("linux-server.json") as json_file_1:
-    #     json1 = json.load(json_file_1)
-    # with open("linux-server-2.json") as json_file_2:
-    #     json2 = json.load(json_file_2)
-    # with open("windows-server.json") as json_file_2:
-    #     json2 = json.load(json_file_2)
 
     comparison_result = compare_json(json1, json2)
 
     print("Identical:", comparison_result["identical"])
-    print("Differences:")
-    for diff in comparison_result["differences"]:
-        print(f"- Path: {diff['path']}")
-        print(f"  {json1_name}: {diff['value1']}")
-        print(f"  {json2_name}: {diff['value2']}\n")
+    if len(comparison_result["differences"]) > 0:
+        print("Differences:")
+        for diff in comparison_result["differences"]:
+            print(f"- Path: {diff['path']}")
+            print(f"  {json1_name}: {diff['value1']}")
+            print(f"  {json2_name}: {diff['value2']}\n")
 
 
 if __name__ == "__main__":
