@@ -87,6 +87,22 @@ Differences:
   Linux Server_2: Off
 ```
 
+***Bash Magic***
+
+```sh
+curl https://workload.us-1.cloudone.trendmicro.com/api/policies/8 \
+    -H "Content-type: application/json" -H "api-version: v1" -H "api-secret-key: SWP-API-KEY" > linux-server.json
+curl https://workload.us-1.cloudone.trendmicro.com/api/policies/265 \
+    -H "Content-type: application/json" -H "api-version: v1" -H "api-secret-key: SWP-API-KEY" > linux-server-2.json
+ 
+jq --argfile a linux-server.json --argfile b linux-server-2.json -n '
+  reduce ($a + $b | keys_unsorted[]) as $k ({}; .[$k] =
+    if $a[$k] == $b[$k] then null
+    else {"file1": $a[$k], "file2": $b[$k]} end
+  ) | del(.[] | select(. == null))
+'
+```
+
 ## Support
 
 This is an Open Source community project. Project contributors may be able to help, depending on their time and availability. Please be specific about what you're trying to do, your system, and steps to reproduce the problem.
